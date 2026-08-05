@@ -56,6 +56,8 @@ jobs:
           grep -q 'ksu_handle_stat' fs/stat.c
           grep -q 'ksu_handle_sys_reboot' kernel/reboot.c
           grep -q 'DRIVER_RENDER' drivers/gpu/drm/vgem/vgem_drv.c
+          grep -q '^const struct file_operations sel_handle_status_ops' security/selinux/selinuxfs.c
+          ! grep -q '^static const struct file_operations sel_handle_status_ops' security/selinux/selinuxfs.c
 
       - name: Generate merged Clover config
         run: |
@@ -75,7 +77,7 @@ jobs:
 
       - name: Verify required configuration
         run: |
-          required='CONFIG_MACH_XIAOMI_CLOVER CONFIG_ANDROID_BINDER_IPC CONFIG_QCOM_KGSL CONFIG_DRM_VGEM CONFIG_KSU CONFIG_KSU_MANUAL_HOOK CONFIG_KALLSYMS_ALL CONFIG_PID_NS CONFIG_UTS_NS CONFIG_IPC_NS CONFIG_NET_NS CONFIG_USER_NS CONFIG_MEMCG CONFIG_CGROUP_PIDS CONFIG_CGROUP_DEVICE CONFIG_FHANDLE CONFIG_SYSVIPC CONFIG_POSIX_MQUEUE'
+          required='CONFIG_MACH_XIAOMI_CLOVER CONFIG_ANDROID_BINDER_IPC CONFIG_QCOM_KGSL CONFIG_DRM_VGEM CONFIG_KSU CONFIG_KSU_MANUAL_HOOK CONFIG_KALLSYMS CONFIG_PID_NS CONFIG_UTS_NS CONFIG_IPC_NS CONFIG_NET_NS CONFIG_USER_NS CONFIG_MEMCG CONFIG_CGROUP_PIDS CONFIG_CGROUP_DEVICE CONFIG_FHANDLE CONFIG_SYSVIPC CONFIG_POSIX_MQUEUE'
           for option in $required; do
             grep -qx "${option}=y" out/.config || { echo "Missing ${option}=y"; exit 1; }
           done

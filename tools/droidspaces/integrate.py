@@ -172,3 +172,14 @@ if new_features not in vgem_text:
     if vgem_text.count(old_features) != 1:
         raise RuntimeError("vgem driver_features marker mismatch")
     save(vgem_path, vgem_text.replace(old_features, new_features, 1))
+
+selinuxfs_path, selinuxfs_text = load("security/selinux/selinuxfs.c")
+static_status_ops = "static const struct file_operations sel_handle_status_ops = {"
+exported_status_ops = "const struct file_operations sel_handle_status_ops = {"
+if exported_status_ops not in selinuxfs_text:
+    if selinuxfs_text.count(static_status_ops) != 1:
+        raise RuntimeError("sel_handle_status_ops declaration marker mismatch")
+    save(
+        selinuxfs_path,
+        selinuxfs_text.replace(static_status_ops, exported_status_ops, 1),
+    )
