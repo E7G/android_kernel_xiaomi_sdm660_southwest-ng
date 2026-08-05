@@ -60,16 +60,22 @@ jobs:
       - name: Generate merged Clover config
         run: |
           mkdir -p out
-          make ARCH=arm64 O=out vendor/xiaomi/sdm660_defconfig
+          make ARCH=arm64 O=out CC=clang LD=ld.lld \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            vendor/xiaomi/sdm660_defconfig
           scripts/kconfig/merge_config.sh -m -O out \
             out/.config \
             arch/arm64/configs/vendor/xiaomi/clover.config \
             arch/arm64/configs/vendor/xiaomi/clover-droidspaces.config
-          make ARCH=arm64 O=out olddefconfig
+          make ARCH=arm64 O=out CC=clang LD=ld.lld \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            olddefconfig
 
       - name: Verify required configuration
         run: |
-          required='CONFIG_MACH_XIAOMI_CLOVER CONFIG_ANDROID_BINDER_IPC CONFIG_QCOM_KGSL CONFIG_DRM_VGEM CONFIG_KSU CONFIG_KSU_MANUAL_HOOK CONFIG_PID_NS CONFIG_UTS_NS CONFIG_IPC_NS CONFIG_NET_NS CONFIG_USER_NS CONFIG_MEMCG CONFIG_CGROUP_PIDS CONFIG_CGROUP_DEVICE CONFIG_FHANDLE CONFIG_SYSVIPC CONFIG_POSIX_MQUEUE'
+          required='CONFIG_MACH_XIAOMI_CLOVER CONFIG_ANDROID_BINDER_IPC CONFIG_QCOM_KGSL CONFIG_DRM_VGEM CONFIG_KSU CONFIG_KSU_MANUAL_HOOK CONFIG_KALLSYMS_ALL CONFIG_PID_NS CONFIG_UTS_NS CONFIG_IPC_NS CONFIG_NET_NS CONFIG_USER_NS CONFIG_MEMCG CONFIG_CGROUP_PIDS CONFIG_CGROUP_DEVICE CONFIG_FHANDLE CONFIG_SYSVIPC CONFIG_POSIX_MQUEUE'
           for option in $required; do
             grep -qx "${option}=y" out/.config || { echo "Missing ${option}=y"; exit 1; }
           done
