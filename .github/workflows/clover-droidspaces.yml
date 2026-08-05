@@ -1,0 +1,106 @@
+name: Clover 4.19 Droidspaces Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - clover-droidspaces-rksu
+    paths:
+      - .github/workflows/clover-droidspaces.yml
+      - arch/arm64/configs/vendor/xiaomi/clover-droidspaces.config
+      - tools/droidspaces/**
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout kernel
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex git make python3 wget xz-utils \
+            libelf-dev libssl-dev gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+
+      - name: Install pinned Android clang
+        run: |
+          mkdir -p "$HOME/clang"
+          wget -q --show-progress \
+            https://github.com/ZyCromerZ/Clang/releases/download/15.0.7-20251111-release/Clang-15.0.7-20251111.tar.gz \
+            -O clang.tar.gz
+          tar -xf clang.tar.gz -C "$HOME/clang"
+          echo "$HOME/clang/bin" >> "$GITHUB_PATH"
+
+      - name: Integrate pinned ReSukiSU
+        run: |
+          git clone --filter=blob:none https://github.com/ReSukiSU/ReSukiSU.git KernelSU
+          git -C KernelSU checkout d5ba3d2d51a4c5b41a182112faa13c02b98e31a1
+          ln -sfn ../../KernelSU/kernel drivers/kernelsu
+          grep -q 'obj-$(CONFIG_KSU) += kernelsu/' drivers/Makefile || \
+            printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
+            sed -i '/endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+
+      - name: Apply Clover integration patches
+        run: |
+          git apply --check tools/droidspaces/patches/*.patch
+          git apply tools/droidspaces/patches/*.patch
+
+      - name: Generate merged Clover config
+        run: |
+          mkdir -p out
+          make ARCH=arm64 O=out vendor/xiaomi/sdm660_defconfig
+          scripts/kconfig/merge_config.sh -m -O out \
+            out/.config \
+            arch/arm64/configs/vendor/xiaomi/clover.config \
+            arch/arm64/configs/vendor/xiaomi/clover-droidspaces.config
+          make ARCH=arm64 O=out olddefconfig
+
+      - name: Verify required configuration
+        run: |
+          required='CONFIG_MACH_XIAOMI_CLOVER CONFIG_ANDROID_BINDER_IPC CONFIG_QCOM_KGSL CONFIG_DRM_VGEM CONFIG_KSU CONFIG_KSU_MANUAL_HOOK CONFIG_PID_NS CONFIG_UTS_NS CONFIG_IPC_NS CONFIG_NET_NS CONFIG_USER_NS CONFIG_MEMCG CONFIG_CGROUP_PIDS CONFIG_CGROUP_DEVICE CONFIG_FHANDLE CONFIG_SYSVIPC CONFIG_POSIX_MQUEUE'
+          for option in $required; do
+            grep -qx "${option}=y" out/.config || { echo "Missing ${option}=y"; exit 1; }
+          done
+          grep -qx '# CONFIG_DRM_MSM is not set' out/.config
+
+      - name: Build Image.gz-dtb
+        env:
+          KBUILD_BUILD_USER: E7G
+          KBUILD_BUILD_HOST: github-actions
+        run: |
+          make -j"$(nproc)" ARCH=arm64 O=out \
+            CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip \
+            OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            Image.gz-dtb
+
+      - name: Verify output symbols
+        run: |
+          test -s out/arch/arm64/boot/Image.gz-dtb
+          llvm-nm out/vmlinux | grep -q ' ksu_handle_execveat$'
+          llvm-nm out/vmlinux | grep -q ' vgem_init$'
+          sha256sum out/arch/arm64/boot/Image.gz-dtb > SHA256SUMS
+          cp out/.config clover-4.19.config
+
+      - name: Upload test kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: clover-4.19-droidspaces-rksu
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            out/arch/arm64/boot/Image.gz-dtb
+            out/arch/arm64/boot/dts/vendor/qcom/sdm660-mtp-clover.dtb
+            clover-4.19.config
+            SHA256SUMS

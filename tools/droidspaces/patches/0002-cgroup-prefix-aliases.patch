@@ -1,0 +1,17 @@
+diff --git a/kernel/cgroup/cgroup.c b/kernel/cgroup/cgroup.c
+--- a/kernel/cgroup/cgroup.c
++++ b/kernel/cgroup/cgroup.c
+@@ -3496,5 +3496,13 @@ static int cgroup_add_file(struct cgroup_subsys_state *css, struct cgroup *cgrp,
+ 		spin_unlock_irq(&cgroup_file_kn_lock);
+ 	}
+ 
++	/* Android uses noprefix; Droidspaces/LXC also probes canonical names. */
++	if (cft->ss && (cgrp->root->flags & CGRP_ROOT_NOPREFIX) &&
++	    !(cft->flags & CFTYPE_NO_PREFIX)) {
++		snprintf(name, CGROUP_FILE_NAME_MAX, "%s.%s",
++			 cft->ss->name, cft->name);
++		kernfs_create_link(cgrp->kn, name, kn);
++	}
++
+ 	return 0;
+ }
