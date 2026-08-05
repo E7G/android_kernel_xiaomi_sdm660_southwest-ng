@@ -50,11 +50,12 @@ jobs:
 
       - name: Apply Clover integration patches
         run: |
-          sed -i 's/\r$//' \
-            fs/exec.c fs/open.c fs/stat.c kernel/reboot.c \
-            kernel/cgroup/cgroup.c drivers/gpu/drm/vgem/vgem_drv.c
-          git apply --ignore-space-change --check tools/droidspaces/patches/*.patch
-          git apply --ignore-space-change tools/droidspaces/patches/*.patch
+          python3 tools/droidspaces/integrate.py
+          grep -q 'ksu_handle_execveat' fs/exec.c
+          grep -q 'ksu_handle_faccessat' fs/open.c
+          grep -q 'ksu_handle_stat' fs/stat.c
+          grep -q 'ksu_handle_sys_reboot' kernel/reboot.c
+          grep -q 'DRIVER_RENDER' drivers/gpu/drm/vgem/vgem_drv.c
 
       - name: Generate merged Clover config
         run: |
