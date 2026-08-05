@@ -50,8 +50,8 @@ jobs:
 
       - name: Apply Clover integration patches
         run: |
-          git apply --check tools/droidspaces/patches/*.patch
-          git apply tools/droidspaces/patches/*.patch
+          git apply --ignore-space-change --check tools/droidspaces/patches/*.patch
+          git apply --ignore-space-change tools/droidspaces/patches/*.patch
 
       - name: Generate merged Clover config
         run: |
