@@ -213,12 +213,17 @@ if new_features not in vgem_text:
 save(vgem_path, vgem_text)
 
 selinuxfs_path, selinuxfs_text = load("security/selinux/selinuxfs.c")
+static_write_ops = "static ssize_t (*const write_op[])(struct file *, char *, size_t) = {"
+exported_write_ops = "ssize_t (*const write_op[])(struct file *, char *, size_t) = {"
+if exported_write_ops not in selinuxfs_text.splitlines():
+    if selinuxfs_text.count(static_write_ops) != 1:
+        raise RuntimeError("write_op declaration marker mismatch")
+    selinuxfs_text = selinuxfs_text.replace(static_write_ops, exported_write_ops, 1)
+
 static_status_ops = "static const struct file_operations sel_handle_status_ops = {"
 exported_status_ops = "const struct file_operations sel_handle_status_ops = {"
 if exported_status_ops not in selinuxfs_text.splitlines():
     if selinuxfs_text.count(static_status_ops) != 1:
         raise RuntimeError("sel_handle_status_ops declaration marker mismatch")
-    save(
-        selinuxfs_path,
-        selinuxfs_text.replace(static_status_ops, exported_status_ops, 1),
-    )
+    selinuxfs_text = selinuxfs_text.replace(static_status_ops, exported_status_ops, 1)
+save(selinuxfs_path, selinuxfs_text)
