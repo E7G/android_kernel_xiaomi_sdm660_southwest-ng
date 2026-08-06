@@ -79,6 +79,7 @@ jobs:
           grep -q '^const struct file_operations sel_handle_status_ops' security/selinux/selinuxfs.c
           ! grep -q '^static const struct file_operations sel_handle_status_ops' security/selinux/selinuxfs.c
           grep -A2 '^&ipa_hw {' arch/arm64/boot/dts/vendor/qcom/sdm660-mtp-clover.dts | grep -q 'status = "disabled";'
+          grep -q 'ramoops@9fe00000' arch/arm64/boot/dts/vendor/qcom/sdm660-mtp-clover.dts
 
       - name: Generate merged Clover config
         run: |

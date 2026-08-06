@@ -252,6 +252,17 @@ ipa_disabled = """
 &ipa_hw {
 	status = "disabled";
 };
+
+/* Reuse the Clover ROM's 1 MiB persistent-console region for crash capture. */
+&{/reserved-memory} {
+	ramoops@9fe00000 {
+		compatible = "ramoops";
+		reg = <0x0 0x9fe00000 0x0 0x100000>;
+		record-size = <0x20000>;
+		console-size = <0x20000>;
+		pmsg-size = <0x20000>;
+	};
+};
 """
 if ipa_disabled.strip() not in clover_dts_text:
     save(clover_dts_path, clover_dts_text.rstrip() + ipa_disabled)
