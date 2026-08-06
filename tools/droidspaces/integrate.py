@@ -157,6 +157,14 @@ insert_after_in(
 	struct mem_cgroup *old_memcg;""",
 )
 
+drm_irq_path, drm_irq_text = load("drivers/gpu/drm/drm_irq.c")
+qcom_irq_flags = "unsigned long sh_flags = IRQF_PERF_CRITICAL;"
+upstream_irq_flags = "unsigned long sh_flags = 0;"
+if upstream_irq_flags not in drm_irq_text:
+    if drm_irq_text.count(qcom_irq_flags) != 1:
+        raise RuntimeError("DRM IRQ flags marker mismatch")
+    save(drm_irq_path, drm_irq_text.replace(qcom_irq_flags, upstream_irq_flags, 1))
+
 cgroup_path, cgroup_text = load("kernel/cgroup/cgroup.c")
 cgroup_start = cgroup_text.index("static int cgroup_add_file(")
 cgroup_return = cgroup_text.index("return 0;", cgroup_start)
