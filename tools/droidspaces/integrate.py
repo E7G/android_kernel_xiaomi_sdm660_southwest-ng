@@ -149,6 +149,14 @@ insert_after_in(
 #endif""",
 )
 
+insert_after_in(
+    "fs/notify/fanotify/fanotify.c",
+    "struct fanotify_event_info *fanotify_alloc_event(",
+    "gfp_t gfp = GFP_KERNEL_ACCOUNT;",
+    """
+	struct mem_cgroup *old_memcg;""",
+)
+
 cgroup_path, cgroup_text = load("kernel/cgroup/cgroup.c")
 cgroup_start = cgroup_text.index("static int cgroup_add_file(")
 cgroup_return = cgroup_text.index("return 0;", cgroup_start)
