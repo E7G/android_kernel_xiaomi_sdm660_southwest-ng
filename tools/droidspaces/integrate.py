@@ -242,3 +242,16 @@ if exported_status_ops not in selinuxfs_text.splitlines():
         raise RuntimeError("sel_handle_status_ops declaration marker mismatch")
     selinuxfs_text = selinuxfs_text.replace(static_status_ops, exported_status_ops, 1)
 save(selinuxfs_path, selinuxfs_text)
+
+clover_dts_path, clover_dts_text = load(
+    "arch/arm64/boot/dts/vendor/qcom/sdm660-mtp-clover.dts"
+)
+ipa_disabled = """
+
+/* Diagnostic: isolate the early boot reset seen after IPA probe. */
+&ipa_hw {
+	status = "disabled";
+};
+"""
+if ipa_disabled.strip() not in clover_dts_text:
+    save(clover_dts_path, clover_dts_text.rstrip() + ipa_disabled)
