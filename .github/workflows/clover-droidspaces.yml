@@ -26,8 +26,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            bc bison flex git make python3 wget xz-utils \
+            bc bison ccache flex git make python3 wget xz-utils \
             libelf-dev libssl-dev gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+
+      - name: Restore compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: clover-4.19-ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            clover-4.19-ccache-${{ runner.os }}-
+
+      - name: Configure compiler cache
+        run: |
+          ccache --max-size=2G
+          ccache --zero-stats
 
       - name: Install pinned Android clang
         run: |
@@ -56,6 +69,7 @@ jobs:
           grep -q 'ksu_handle_stat' fs/stat.c
           grep -q 'ksu_handle_sys_reboot' kernel/reboot.c
           grep -q 'struct mem_cgroup \*old_memcg;' fs/notify/fanotify/fanotify.c
+          grep -q 'panic("MSM watchdog bark")' drivers/soc/qcom/watchdog_v2.c
           grep -q 'unsigned long sh_flags = 0;' drivers/gpu/drm/drm_irq.c
           grep -q 'DEVFREQ_MSM_CPU_DDR_BW' drivers/gpu/drm/drm_atomic.c
           grep -q '#include <linux/fs_context.h>' drivers/gpu/drm/vgem/vgem_drv.c
@@ -68,7 +82,7 @@ jobs:
       - name: Generate merged Clover config
         run: |
           mkdir -p out
-          make ARCH=arm64 O=out CC=clang LD=ld.lld \
+          make ARCH=arm64 O=out CC="ccache clang" LD=ld.lld \
             AR=llvm-ar NM=llvm-nm STRIP=llvm-strip \
             OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -80,7 +94,7 @@ jobs:
             out/.config \
             arch/arm64/configs/vendor/xiaomi/clover.config \
             arch/arm64/configs/vendor/xiaomi/clover-droidspaces.config
-          make ARCH=arm64 O=out CC=clang LD=ld.lld \
+          make ARCH=arm64 O=out CC="ccache clang" LD=ld.lld \
             AR=llvm-ar NM=llvm-nm STRIP=llvm-strip \
             OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -103,7 +117,7 @@ jobs:
           KBUILD_BUILD_HOST: github-actions
         run: |
           make -j"$(nproc)" ARCH=arm64 O=out \
-            CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip \
+            CC="ccache clang" LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip \
             OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
@@ -118,6 +132,7 @@ jobs:
           llvm-nm out/vmlinux | grep -q ' vgem_init$'
           sha256sum out/arch/arm64/boot/Image.gz-dtb > SHA256SUMS
           cp out/.config clover-4.19.config
+          ccache --show-stats
 
       - name: Upload test kernel
         uses: actions/upload-artifact@v4

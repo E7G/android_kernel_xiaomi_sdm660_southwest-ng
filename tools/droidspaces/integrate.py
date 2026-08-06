@@ -176,6 +176,21 @@ if current_boost_device not in drm_atomic_text:
         drm_atomic_text.replace(old_boost_device, current_boost_device, 1),
     )
 
+watchdog_path, watchdog_text = load("drivers/soc/qcom/watchdog_v2.c")
+watchdog_start = watchdog_text.index("static irqreturn_t wdog_bark_handler(")
+watchdog_end = watchdog_text.index("\n}", watchdog_start)
+watchdog_region = watchdog_text[watchdog_start:watchdog_end]
+watchdog_bite = "\tmsm_trigger_wdog_bite();"
+watchdog_panic = '\tpanic("MSM watchdog bark");'
+if watchdog_panic not in watchdog_region:
+    if watchdog_region.count(watchdog_bite) != 1:
+        raise RuntimeError("watchdog bark marker mismatch")
+    watchdog_region = watchdog_region.replace(watchdog_bite, watchdog_panic, 1)
+    save(
+        watchdog_path,
+        watchdog_text[:watchdog_start] + watchdog_region + watchdog_text[watchdog_end:],
+    )
+
 cgroup_path, cgroup_text = load("kernel/cgroup/cgroup.c")
 cgroup_start = cgroup_text.index("static int cgroup_add_file(")
 cgroup_return = cgroup_text.index("return 0;", cgroup_start)
