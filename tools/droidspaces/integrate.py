@@ -174,12 +174,24 @@ if cgroup_addition.strip() not in cgroup_text[cgroup_start:cgroup_return]:
     save(cgroup_path, cgroup_text[:line_start] + cgroup_addition + cgroup_text[line_start:])
 
 vgem_path, vgem_text = load("drivers/gpu/drm/vgem/vgem_drv.c")
+fs_context_include = "#include <linux/fs_context.h>\n"
+ramfs_include = "#include <linux/ramfs.h>"
+if fs_context_include.strip() not in vgem_text:
+    if vgem_text.count(ramfs_include) != 1:
+        raise RuntimeError("vgem ramfs include marker mismatch")
+    vgem_text = vgem_text.replace(
+        ramfs_include,
+        fs_context_include + ramfs_include,
+        1,
+    )
+
 old_features = "DRIVER_GEM | DRIVER_PRIME,"
 new_features = "DRIVER_GEM | DRIVER_PRIME | DRIVER_RENDER,"
 if new_features not in vgem_text:
     if vgem_text.count(old_features) != 1:
         raise RuntimeError("vgem driver_features marker mismatch")
-    save(vgem_path, vgem_text.replace(old_features, new_features, 1))
+    vgem_text = vgem_text.replace(old_features, new_features, 1)
+save(vgem_path, vgem_text)
 
 selinuxfs_path, selinuxfs_text = load("security/selinux/selinuxfs.c")
 static_status_ops = "static const struct file_operations sel_handle_status_ops = {"
