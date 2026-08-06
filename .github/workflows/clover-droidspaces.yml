@@ -70,6 +70,7 @@ jobs:
           grep -q 'ksu_handle_sys_reboot' kernel/reboot.c
           grep -q 'struct mem_cgroup \*old_memcg;' fs/notify/fanotify/fanotify.c
           grep -q 'panic("MSM watchdog bark")' drivers/soc/qcom/watchdog_v2.c
+          grep -q 'boot_wdog = ioremap(0x17817000, 0x1000);' drivers/soc/qcom/watchdog_v2.c
           grep -q 'unsigned long sh_flags = 0;' drivers/gpu/drm/drm_irq.c
           grep -q 'DEVFREQ_MSM_CPU_DDR_BW' drivers/gpu/drm/drm_atomic.c
           grep -q '#include <linux/fs_context.h>' drivers/gpu/drm/vgem/vgem_drv.c

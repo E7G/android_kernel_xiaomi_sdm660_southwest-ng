@@ -191,6 +191,36 @@ if watchdog_panic not in watchdog_region:
         watchdog_text[:watchdog_start] + watchdog_region + watchdog_text[watchdog_end:],
     )
 
+watchdog_path, watchdog_text = load("drivers/soc/qcom/watchdog_v2.c")
+watchdog_init_old = """static int init_watchdog(void)
+{
+	return platform_driver_register(&msm_watchdog_driver);
+}
+"""
+watchdog_init_clover = """static int init_watchdog(void)
+{
+#ifdef CONFIG_MACH_XIAOMI_CLOVER
+	void __iomem *boot_wdog;
+
+	/* Stop the bootloader WDT before the platform device can be probed. */
+	boot_wdog = ioremap(0x17817000, 0x1000);
+	if (boot_wdog) {
+		__raw_writel(0, boot_wdog + WDT0_EN);
+		mb();
+		iounmap(boot_wdog);
+	}
+#endif
+	return platform_driver_register(&msm_watchdog_driver);
+}
+"""
+if watchdog_init_clover not in watchdog_text:
+    if watchdog_text.count(watchdog_init_old) != 1:
+        raise RuntimeError("watchdog init marker mismatch")
+    save(
+        watchdog_path,
+        watchdog_text.replace(watchdog_init_old, watchdog_init_clover, 1),
+    )
+
 cgroup_path, cgroup_text = load("kernel/cgroup/cgroup.c")
 cgroup_start = cgroup_text.index("static int cgroup_add_file(")
 cgroup_return = cgroup_text.index("return 0;", cgroup_start)
