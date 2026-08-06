@@ -176,7 +176,7 @@ if new_features not in vgem_text:
 selinuxfs_path, selinuxfs_text = load("security/selinux/selinuxfs.c")
 static_status_ops = "static const struct file_operations sel_handle_status_ops = {"
 exported_status_ops = "const struct file_operations sel_handle_status_ops = {"
-if exported_status_ops not in selinuxfs_text:
+if exported_status_ops not in selinuxfs_text.splitlines():
     if selinuxfs_text.count(static_status_ops) != 1:
         raise RuntimeError("sel_handle_status_ops declaration marker mismatch")
     save(
